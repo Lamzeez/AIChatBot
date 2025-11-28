@@ -98,11 +98,18 @@ ADDITIONAL INFORMATION
     const prompt = `
 You are an expert ${subject} teacher. Using the information below, create a detailed and classroom-ready lesson plan.
 
-Requirements:
+CRITICAL FORMATTING RULES:
+- Your response must be PLAIN TEXT only.
+- Do NOT use Markdown at all (no **bold**, no headings with #, no bullet points that start with * asterisk).
+- You may use numbered lists like "1." and simple hyphens "-" for bullets, but never use the "*" character.
+- Do NOT add any introduction or explanation like "Here is a detailed lesson plan:".
+- The FIRST line of your response must be exactly: HEADER INFORMATION
+- After that, continue the lesson plan in a clear, teacher-friendly format.
+
+Content rules:
 - Use clear sections such as: I. Objectives, II. Subject Matter / Content, III. Learning Activities, IV. Assessment, V. Assignment/Enrichment.
 - Align the objectives with the given learning competencies (MELCs).
 - Make activities age-appropriate for Grade ${gradeLevel}.
-- Use bullet points and numbering where helpful.
 - Keep the tone professional but easy for teachers to follow.
 
 Here is the lesson information provided by the teacher:
@@ -124,10 +131,26 @@ ${lessonInfo}
       }
 
       const data = await response.json();
-      setLessonPlan(
+
+      let reply =
         data.reply ??
-          "Sorry, I couldn't generate a lesson plan. Please try again."
-      );
+        "Sorry, I couldn't generate a lesson plan. Please try again.";
+
+      // --- Post-process to enforce plain-text, no intro, no asterisks ---
+
+      // Remove all asterisks (in case model still used markdown)
+      reply = reply.replace(/\*/g, "");
+
+      // If there is any text before "HEADER INFORMATION", remove it
+      const headerIndex = reply.indexOf("HEADER INFORMATION");
+      if (headerIndex > -1) {
+        reply = reply.slice(headerIndex);
+      }
+
+      // Trim extra blank lines/whitespace
+      reply = reply.trim();
+
+      setLessonPlan(reply);
     } catch (err) {
       console.error(err);
       setLessonPlan(
@@ -614,7 +637,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
-    paddingTop: 44,
+    paddingTop: 24,
   },
   header: {
     paddingBottom: 16,
@@ -683,7 +706,7 @@ const styles = StyleSheet.create({
   helperText: {
     marginTop: 6,
     fontSize: 12,
-    color: "#f97373", // soft red
+    color: "#f97373",
     textAlign: "center",
   },
   outputText: {
