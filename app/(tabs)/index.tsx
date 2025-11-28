@@ -1,5 +1,7 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -172,6 +174,69 @@ ${lessonInfo}
       Alert.alert("Error", "Failed to copy to clipboard.");
     }
   };
+
+  // 🔹 NEW: Save as Word-editable file (.rtf)
+  const handleSaveAsWord = async () => {
+    if (!lessonPlan) {
+      Alert.alert("No content", "Generate a lesson plan first.");
+      return;
+    }
+
+    try {
+      // Escape RTF special characters
+      const escapeForRtf = (text: string) =>
+        text
+          .replace(/\\/g, "\\\\")
+          .replace(/{/g, "\\{")
+          .replace(/}/g, "\\}");
+
+      const escaped = escapeForRtf(lessonPlan);
+      const rtfBody = escaped.replace(/\n/g, "\\par\n");
+      const rtfContent = `{\\rtf1\\ansi\n${rtfBody}\n}`;
+
+      const safeDate = (date || "LessonPlan").replace(/[^\w.-]/g, "_");
+      const fileName = `LessonPlan_${safeDate}.rtf`;
+
+      // documentDirectory is null on web, so fall back to cacheDirectory
+      const baseDir =
+        FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+
+      if (!baseDir) {
+        Alert.alert(
+          "Error",
+          "No writable directory available on this platform."
+        );
+        return;
+      }
+
+      const fileUri = baseDir + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, rtfContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(
+          "File saved",
+          `RTF file saved to: ${fileUri}\nYou can open it with Word or any document editor.`
+        );
+        return;
+      }
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "application/rtf",
+        dialogTitle: "Save or share lesson plan",
+      });
+    } catch (error) {
+      console.error("Save as Word failed:", error);
+      Alert.alert(
+        "Error",
+        "Unable to save the lesson plan as a Word file. Please try again."
+      );
+    }
+  };
+
 
   // Date picker handler
   const handleDateChange = (_: any, selectedDate?: Date) => {
@@ -423,13 +488,26 @@ ${lessonInfo}
             {lessonPlan ? (
               <>
                 <Text style={styles.outputText}>{lessonPlan}</Text>
-                <TouchableOpacity
-                  style={styles.copyButton}
-                  onPress={handleCopy}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
-                </TouchableOpacity>
+
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={handleCopy}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleSaveAsWord}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.saveButtonText}>
+                      Save as Word File
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </>
             ) : (
               <Text style={styles.placeholderOutput}>
@@ -721,9 +799,13 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     fontStyle: "italic",
   },
-  copyButton: {
+  actionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 12,
-    alignSelf: "flex-start",
+    gap: 8,
+  },
+  copyButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -734,6 +816,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#10b981",
+  },
+  saveButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#3b82f6",
+  },
+  saveButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#bfdbfe",
   },
   dateInput: {
     borderRadius: 10,
