@@ -1,4 +1,6 @@
-import * as Clipboard from "expo-clipboard"; // 👈 NEW
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as Clipboard from "expo-clipboard";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +16,8 @@ import {
   View,
 } from "react-native";
 
+const NGROK_URL = "https://unascendent-underfoot-tessa.ngrok-free.dev"; // <-- keep your working URL here
+
 export default function LessonPlanScreen() {
   // HEADER INFORMATION
   const [school, setSchool] = useState("");
@@ -24,6 +28,9 @@ export default function LessonPlanScreen() {
   const [week, setWeek] = useState("");
   const [day, setDay] = useState("");
   const [date, setDate] = useState("");
+
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // OBJECTIVES
   const [learningCompetencies, setLearningCompetencies] = useState("");
@@ -48,11 +55,11 @@ export default function LessonPlanScreen() {
     quarter,
     week,
     day,
-    date,
     learningCompetencies,
     topicTitle,
     timeAllotted,
   ].every((v) => v.trim().length > 0);
+
 
   const handleGenerate = async () => {
     if (!allRequiredFilled || loading) return;
@@ -100,14 +107,13 @@ ${lessonInfo}
     `.trim();
 
     try {
-      const NGROK_URL = "https://unascendent-underfoot-tessa.ngrok-free.dev";
-
       const response = await fetch(`${NGROK_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: prompt }),
+        body: JSON.stringify({
+          message: prompt,
+        }),
       });
-
 
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -128,7 +134,6 @@ ${lessonInfo}
     }
   };
 
-  // 👇 NEW: copy-to-clipboard handler
   const handleCopy = async () => {
     if (!lessonPlan) return;
 
@@ -138,6 +143,19 @@ ${lessonInfo}
     } catch (error) {
       console.error("Copy failed:", error);
       Alert.alert("Error", "Failed to copy to clipboard.");
+    }
+  };
+
+  // Date picker handler
+  const handleDateChange = (_: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const formatted = selectedDate.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      setDate(formatted);
     }
   };
 
@@ -164,54 +182,110 @@ ${lessonInfo}
           {/* HEADER INFORMATION */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Header Information</Text>
+
             <Field
               label="School"
               value={school}
               onChangeText={setSchool}
               placeholder="e.g., Sample National High School"
             />
+
             <Field
               label="Teacher"
               value={teacher}
               onChangeText={setTeacher}
               placeholder="e.g., Juan Dela Cruz"
             />
-            <Field
+
+            {/* Grade Level DROPDOWN */}
+            <DropdownField
               label="Grade Level"
-              value={gradeLevel}
-              onChangeText={setGradeLevel}
-              placeholder="e.g., Grade 7"
+              selectedValue={gradeLevel}
+              onValueChange={setGradeLevel}
+              placeholder="Select grade level"
+              options={[
+                { label: "Grade 7", value: "Grade 7" },
+                { label: "Grade 8", value: "Grade 8" },
+                { label: "Grade 9", value: "Grade 9" },
+                { label: "Grade 10", value: "Grade 10" },
+                { label: "Grade 11", value: "Grade 11" },
+                { label: "Grade 12", value: "Grade 12" },
+              ]}
             />
+
             <Field
               label="Subject"
               value={subject}
               onChangeText={setSubject}
               placeholder="e.g., Science"
             />
-            <Field
+
+            {/* Quarter DROPDOWN */}
+            <DropdownField
               label="Quarter"
-              value={quarter}
-              onChangeText={setQuarter}
-              placeholder="e.g., 1st Quarter"
+              selectedValue={quarter}
+              onValueChange={setQuarter}
+              placeholder="Select quarter"
+              options={[
+                { label: "1st Quarter", value: "1st Quarter" },
+                { label: "2nd Quarter", value: "2nd Quarter" },
+                { label: "3rd Quarter", value: "3rd Quarter" },
+                { label: "4th Quarter", value: "4th Quarter" },
+              ]}
             />
-            <Field
+
+            {/* Week DROPDOWN */}
+            <DropdownField
               label="Week"
-              value={week}
-              onChangeText={setWeek}
-              placeholder="e.g., Week 2"
+              selectedValue={week}
+              onValueChange={setWeek}
+              placeholder="Select week"
+              options={Array.from({ length: 10 }, (_, i) => ({
+                label: `Week ${i + 1}`,
+                value: `Week ${i + 1}`,
+              }))}
             />
-            <Field
+
+            {/* Day DROPDOWN */}
+            <DropdownField
               label="Day"
-              value={day}
-              onChangeText={setDay}
-              placeholder="e.g., Day 1 (Monday)"
+              selectedValue={day}
+              onValueChange={setDay}
+              placeholder="Select day"
+              options={[
+                { label: "Monday", value: "Monday" },
+                { label: "Tuesday", value: "Tuesday" },
+                { label: "Wednesday", value: "Wednesday" },
+                { label: "Thursday", value: "Thursday" },
+                { label: "Friday", value: "Friday" },
+              ]}
             />
-            <Field
-              label="Date"
-              value={date}
-              onChangeText={setDate}
-              placeholder="e.g., September 10, 2025"
-            />
+
+            {/* DATE PICKER */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Date</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={
+                    date ? styles.dateText : [styles.dateText, styles.datePlaceholder]
+                  }
+                >
+                  {date || "Tap to select date"}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date ? new Date(date) : new Date()}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={handleDateChange}
+                />
+              )}
+            </View>
           </View>
 
           {/* OBJECTIVES */}
@@ -240,12 +314,21 @@ ${lessonInfo}
           {/* ADDITIONAL INFORMATION */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Additional Information</Text>
-            <Field
+
+            {/* Time Allotted DROPDOWN */}
+            <DropdownField
               label="Time Allotted"
-              value={timeAllotted}
-              onChangeText={setTimeAllotted}
-              placeholder="e.g., 60 minutes"
+              selectedValue={timeAllotted}
+              onValueChange={setTimeAllotted}
+              placeholder="Select time"
+              options={[
+                { label: "30 minutes", value: "30 minutes" },
+                { label: "45 minutes", value: "45 minutes" },
+                { label: "60 minutes", value: "60 minutes" },
+                { label: "90 minutes", value: "90 minutes" },
+              ]}
             />
+
             <Field
               label="Resources Available"
               value={resourcesAvailable}
@@ -284,8 +367,6 @@ ${lessonInfo}
             {lessonPlan ? (
               <>
                 <Text style={styles.outputText}>{lessonPlan}</Text>
-
-                {/* 👇 NEW: Copy button appears only when there is output */}
                 <TouchableOpacity
                   style={styles.copyButton}
                   onPress={handleCopy}
@@ -307,7 +388,7 @@ ${lessonInfo}
   );
 }
 
-// Reusable field component
+// Reusable text field component
 type FieldProps = {
   label: string;
   value: string;
@@ -334,6 +415,52 @@ function Field({
         placeholderTextColor="#6b7280"
         multiline={multiline}
       />
+    </View>
+  );
+}
+
+// New dropdown component
+type DropdownFieldProps = {
+  label: string;
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  options: { label: string; value: string }[];
+};
+
+function DropdownField({
+  label,
+  selectedValue,
+  onValueChange,
+  placeholder,
+  options,
+}: DropdownFieldProps) {
+  return (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={selectedValue || ""}
+          onValueChange={(val) => {
+            if (val !== "") onValueChange(val);
+          }}
+          dropdownIconColor="#9ca3af"
+        >
+          <Picker.Item
+            label={placeholder || "Select an option"}
+            value=""
+            color="#6b7280"
+          />
+          {options.map((opt) => (
+            <Picker.Item
+              key={opt.value}
+              label={opt.label}
+              value={opt.value}
+              // color="#f9fafb"
+            />
+          ))}
+        </Picker>
+      </View>
     </View>
   );
 }
@@ -398,6 +525,13 @@ const styles = StyleSheet.create({
     minHeight: 70,
     textAlignVertical: "top",
   },
+  pickerContainer: {
+    borderRadius: 10,
+    backgroundColor: "#0b1120",
+    borderWidth: 1,
+    borderColor: "#1f2937",
+    overflow: "hidden",
+  },
   button: {
     marginTop: 16,
     borderRadius: 999,
@@ -426,8 +560,6 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     fontStyle: "italic",
   },
-
-  // 👇 NEW styles for the copy button
   copyButton: {
     marginTop: 12,
     alignSelf: "flex-start",
@@ -441,5 +573,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#10b981",
+  },
+  dateInput: {
+    borderRadius: 10,
+    backgroundColor: "#0b1120",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#1f2937",
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#f9fafb",
+  },
+  datePlaceholder: {
+    color: "#6b7280",
+    fontStyle: "italic",
   },
 });
