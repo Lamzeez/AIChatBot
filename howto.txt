@@ -1,17 +1,21 @@
 AI Lesson Plan Generator – How To Run & Setup
-================================================
+============================================
 
 This project is a mobile AI-powered lesson plan generator built with **Expo (React Native)** and a **Node.js + Express backend** using **Google Gemini** via the Generative Language API. It includes:
 
-- Dropdowns for grade level, quarter, week, day, date, and time allotted
-- Plain-text lesson plan output (no markdown / asterisks)
-- Copy to clipboard
-- Save as Word (.rtf)
-- Save as PDF
-- Templates (save & load common setups, with duplicate protection)
-- Lesson plan history
-- Clear All button
-- Delete buttons for templates and history entries
+- Dropdowns for grade level, quarter, week, day, date, and time allotted  
+- Plain-text lesson plan output (no markdown / asterisks)  
+- Copy to clipboard  
+- Save as Word (.rtf)  
+- Save as PDF  
+- Templates (save & load common setups, with duplicate protection)  
+- Lesson plan history  
+- Clear All button  
+- Delete buttons for templates and history entries  
+
+The main frontend screen lives in:  
+
+- `app/(tabs)/index.tsx` – **AI Lesson Plan Screen**
 
 ------------------------------------------------
 1. Prerequisites
@@ -19,348 +23,108 @@ This project is a mobile AI-powered lesson plan generator built with **Expo (Rea
 
 Make sure you have:
 
-1. Node.js 18+
-   - Check: node -v
-
-2. npm (comes with Node)
-   - Check: npm -v
-
-3. Git (if you’re cloning from a repo)
-
-4. Expo tooling
-   - You can run via npx, so no global install is required.
-
-5. Mobile device with Expo Go app installed
-   - Android: Google Play Store
-   - iOS: App Store
-
-6. ngrok account + auth token
-   - Sign up at ngrok.com
-   - Download ngrok.exe and configure your auth token.
-
-7. Google AI Studio API Key (Gemini)
-   - Go to Google AI Studio
-   - Create an API key for the Generative Language API
-   - Keep it secret (do NOT commit it to GitHub).
-
+1. **Node.js 18+**  
+2. **npm**  
+3. **Git**  
+4. **Expo tooling**  
+5. **Expo Go app** on your phone  
+6. **ngrok account + auth token**  
+7. **Google AI Studio API Key (Gemini)**  
 
 ------------------------------------------------
-2. Project Structure (important folders)
+2. Project Structure
 ------------------------------------------------
 
-- google-ai-backend/
-  - server.js      – Express backend that talks to Gemini
-  - .env           – stores your GOOGLE_API_KEY
-
-- app/(tabs)/index.tsx
-  - Main Expo/React Native screen for the AI Lesson Plan Generator
-
-- howto.txt        – this file
-
+- `google-ai-backend/` – backend (Express, Gemini)
+- `app/(tabs)/index.tsx` – main frontend screen
+- `howto.txt` – this file
 
 ------------------------------------------------
-3. Backend Setup (/google-ai-backend)
+3. Backend Setup (`/google-ai-backend`)
 ------------------------------------------------
 
-3.1 Install backend dependencies
+Initialize if needed:
 
-From the google-ai-backend folder:
+    npm init -y
 
-    cd google-ai-backend
+Install dependencies:
+
     npm install express cors dotenv
 
-Note: On Node 18+ we use the built-in fetch, so no extra fetch package is needed.
-
-
-3.2 Configure environment variables
-
-Create a .env file inside google-ai-backend:
+Create `.env`:
 
     GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY_HERE
     PORT=4000
 
-- Replace YOUR_GOOGLE_API_KEY_HERE with your actual API key when running locally.
-- Before pushing to GitHub, you can change it back to the placeholder value or ignore .env via .gitignore.
+Run backend:
 
-
-3.3 Start the backend server
-
-Terminal 1:
-
-    cd google-ai-backend
     node server.js
-
-You should see something like:
-
-    Server running on port 4000
-    Google AI backend is running ✅
-
-The backend is now listening on port 4000.
-
 
 ------------------------------------------------
 4. Exposing Backend via ngrok
 ------------------------------------------------
 
-We use ngrok so the mobile app (Expo on your phone) can reach the backend.
+Run ngrok:
 
-Working flow:
+    ngrok http 4000
 
-- node server.js in /google-ai-backend (Terminal 1)
-- ngrok.exe http 4000 from the main root directory (Terminal 2)
-- npx expo start --tunnel from the project root (Terminal 3)
+Copy the HTTPS forwarding URL and paste it into:
 
-
-4.1 Start ngrok
-
-Terminal 2 – from your main project root (or any folder where ngrok.exe is available):
-
-    ngrok.exe http 4000
-
-ngrok will output something like:
-
-    Forwarding  https://your-random-subdomain.ngrok-free.app -> http://localhost:4000
-
-Copy that https URL, for example:
-
-    https://unascendent-underfoot-tessa.ngrok-free.dev
-
-
-4.2 Configure the frontend to use ngrok URL
-
-In app/(tabs)/index.tsx, near the top you have:
-
-    const NGROK_URL = "https://unascendent-underfoot-tessa.ngrok-free.dev"; // <-- your working URL
-
-Replace this string with the current ngrok URL whenever it changes.
-This NGROK_URL is the base URL the mobile app uses to call the backend:
-
-    const response = await fetch(`${NGROK_URL}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: prompt }),
-    });
-
+    const NGROK_URL = "https://your-ngrok-url.ngrok-free.app";
 
 ------------------------------------------------
 5. Frontend Setup (Expo app)
 ------------------------------------------------
 
-From the main project root (where app/ lives):
-
-
-5.1 Install Expo-related packages
-
-Run:
+Install frontend packages:
 
     npx expo install @react-native-community/datetimepicker
     npx expo install expo-clipboard
     npx expo install expo-file-system expo-sharing expo-print
     npx expo install @react-native-async-storage/async-storage
 
-Expo will automatically pick the correct versions compatible with your Expo SDK.
-
-
-5.2 Start the Expo app
-
-Terminal 3 – from the project root:
+Start Expo:
 
     npx expo start --tunnel
-
-You should see:
-
-- A QR code in the terminal
-- A URL like exp://...
-
-Then:
-
-- Open Expo Go on your phone
-- Scan the QR code
-- The AI Lesson Plan Generator screen should load
-
 
 ------------------------------------------------
 6. App Features Overview
 ------------------------------------------------
 
-6.1 Input fields & dropdowns
+Includes:
 
-Header Information
-- School (text)
-- Teacher (text)
-- Grade Level (dropdown)
-  - Elementary: Grades 1–6
-  - Junior High: Grades 7–10
-  - Senior High: Grades 11–12
-- Subject (text)
-- Quarter (dropdown: 1st–4th)
-- Week (dropdown: Week 1–Week 10)
-- Day (dropdown: Monday–Friday)
-- Date (date picker)
-
-Objectives
-- Learning competencies (MELCs) – multiline text
-
-Content
-- Topic / Lesson Title – text
-
-Additional Information
-- Time Allotted (dropdown: 30, 45, 60, 90, 120 minutes)
-- Resources Available – multiline
-- Previous Lesson – multiline
-
-AI Output Settings
-- Lesson Plan Style (dropdown)
-  - DepEd Format (Philippines)
-  - Detailed (very explicit steps)
-  - Concise (short but complete)
-  - Activity-heavy (more student tasks)
-- Language (dropdown)
-  - English
-  - Filipino
-  - Bilingual (English + Filipino)
-
-The “Generate Lesson Plan” button is only enabled when all required fields are filled.
-
-
-6.2 Output formatting
-
-The app sends a strict prompt to Gemini:
-
-- Must be plain text only
-- No Markdown, no **bold**, no * bullets
-- The FIRST line must be:
-  
-      HEADER INFORMATION
-
-- Should include clear sections like:
-  - I. Objectives
-  - II. Subject Matter / Content
-  - III. Learning Activities
-  - IV. Assessment
-  - V. Assignment/Enrichment
-
-Post-processing done in the app:
-
-- Removes all asterisk (*) characters
-- Removes anything before “HEADER INFORMATION”
-- Removes closing markers like:
-  - (End of Lesson Plan)
-  - End of lesson plan
-  - This concludes the lesson plan
-- Trims extra whitespace
-
-So the user sees pure lesson plan content from “HEADER INFORMATION” to the last line of the assignment/enrichment.
-
-
-6.3 Actions on generated lesson plan
-
-Below the generated plan:
-
-- Copy to Clipboard
-  - Copies the plain-text lesson plan to the clipboard.
-
-- Save as Word File
-  - Creates an .rtf file with:
-    - A header section (School, Teacher, Subject, Grade, Date)
-    - The lesson plan body
-  - File name pattern (sanitized):
-    School_Subject_Grade_Date.rtf
-  - Uses expo-file-system + expo-sharing.
-
-- Save as PDF
-  - Uses expo-print to generate a PDF with:
-    - Centered header (School title, Teacher, Subject, Grade Level, Date)
-    - Simple styling for:
-      - HEADER INFORMATION
-      - Roman numeral section headings (I., II., etc.)
-  - File name pattern (sanitized):
-    School_Subject_Grade_Date.pdf
-  - Shares/exports via expo-sharing.
-
-
-6.4 Templates, History, Clear & Delete
-
-Templates & History card:
-
-- Save as Template
-  - Saves a template containing:
-    - School, Teacher, Grade Level, Subject
-    - Quarter, Week, Day
-    - Time Allotted, Resources Available, Previous Lesson
-    - Lesson Plan Style, Language
-    - Topic / Lesson Title
-  - Templates are stored in AsyncStorage under @lessonTemplates.
-  - Duplicate protection:
-    - It will NOT save if a template with the same
-      School + Subject + Grade Level + Topic / Lesson Title
-      already exists.
-
-- Load Template
-  - Opens a modal listing saved templates.
-  - Tapping a template fills in all the saved fields (including Topic).
-
-- Delete Template
-  - In the Templates modal, each template row has a small Delete button.
-  - Tapping Delete removes that template from the list and from AsyncStorage.
-
-- View History
-  - Stores up to the last 10 generated lesson plans.
-  - Each entry includes:
-    - Subject, Grade Level, Topic, Date
-    - Full lesson text
-  - Tapping a history item loads its lesson text back into the output area.
-
-- Delete History Entry
-  - In the History modal, each history item row has a Delete button.
-  - Tapping Delete removes that entry from the history and from AsyncStorage.
-
-- Clear All
-  - Resets all input fields:
-    - Header info, Date, MELCs, Topic
-    - Additional info (Time, Resources, Previous Lesson)
-    - AI settings (reverts to DepEd Format + English)
-  - Clears the current generated lesson plan.
-  - Does NOT delete templates or history.
-
+- Full input system  
+- AI generation logic  
+- Templates & history using AsyncStorage  
+- Save as RTF  
+- Save as PDF  
+- Copy to clipboard  
+- Clear All  
+- Delete template / history items  
 
 ------------------------------------------------
 7. Typical Run Workflow (3 terminals)
 ------------------------------------------------
 
-1. Terminal 1 – Backend
+Terminal 1 – Backend:
 
-       cd google-ai-backend
-       node server.js
+    cd google-ai-backend
+    node server.js
 
-2. Terminal 2 – ngrok
+Terminal 2 – ngrok:
 
-       # from project root or where ngrok.exe is
-       ngrok.exe http 4000
+    ngrok http 4000
 
-   - Copy the https://...ngrok-free.dev URL
-   - Paste it into NGROK_URL in app/(tabs)/index.tsx
+Terminal 3 – Expo:
 
-3. Terminal 3 – Expo app
-
-       cd <project-root>
-       npx expo start --tunnel
-
-   - Scan the QR code with Expo Go on your phone
-   - Fill in fields
-   - Generate, copy, or export the lesson plan
-
+    npx expo start --tunnel
 
 ------------------------------------------------
-8. Notes for pushing to GitHub
+8. Notes for GitHub
 ------------------------------------------------
 
-- Do NOT commit:
-  - Your real GOOGLE_API_KEY in .env
-  - Any personal ngrok URL meant only for local use
+- Never commit your real API key  
+- Replace API key with placeholder before pushing  
 
-- Before pushing, you can:
-  - Set GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY_HERE in .env
-  - Keep the real key only in your local environment
+This file is meant to help you quickly set up and run the full AI Lesson Plan Generator system with all backend and Expo packages included.
 
-This file is meant to help you (and future you on another computer) quickly set up and run the full AI Lesson Plan Generator system.
